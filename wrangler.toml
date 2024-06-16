@@ -6,4 +6,4 @@ compatibility_date = "2023-12-18"
 binding = "AI"
 
 [vars]
-URL_PREFIX = "/translate"
+URL_PREFIX = "/summary"

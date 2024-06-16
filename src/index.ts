@@ -6,6 +6,7 @@ export interface Env {
 }
 
 export default {
+
 	async fetch(request: Request, env: Env) {
 		if (request.method !== 'POST') {
 			return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
@@ -27,28 +28,27 @@ export default {
 		try {
 			const ai = new Ai(env.AI);
 
-			const { source_lang, target_lang, text_list } = await request.json() as any;
-			if (!Array.isArray(text_list) || !text_list.length) {
-				return new Response(JSON.stringify({ message: 'Invalid text_list' }), { status: 400 });
+			const { input_text, max_length } = await request.json() as any;
+			if (!input_text.length || typeof input_text !== 'string' ) {
+				return new Response(JSON.stringify({ message: 'Invalid input_text' }), { status: 400 });
 			}
-			const translations = await Promise.all(text_list.map(async (text: string) => {
-				const aiParams: any = {
-					text,
-					target_lang: target_lang === "zh-CN" ? "chinese" : target_lang
-				};
-				if (source_lang && source_lang !== "auto") {
-					aiParams.source_lang = source_lang;
-				}
-				const response = await ai.run('@cf/meta/m2m100-1.2b', aiParams);
-				return {
-					detected_source_lang: source_lang,
-					text: response.translated_text
-				};
-			}));
+			const translations = await this.getResult(ai, input_text, max_length)
 	
 			return new Response(JSON.stringify({ translations, message: 'ok' }));
 		} catch (error) {
 			return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
 		}
 	},
+
+	async getResult(ai: Ai, input_text: string, max_length: number) {
+		const aiParams: any = {
+			input_text,
+			max_length
+		};
+		const response = await ai.run("@cf/facebook/bart-large-cnn" as any, aiParams);
+		return {
+			summarized_length: response.result.summary.length,
+			text: response.result.summary
+		};
+	}
 }
